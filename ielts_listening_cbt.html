@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Listening Test CBT</title>
+<style>
+*{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f4f6f8;color:#1f2937}
+header{background:#172554;color:#fff;padding:18px 24px;position:sticky;top:0;z-index:20;box-shadow:0 2px 10px #0003}
+.wrap{max-width:950px;margin:auto;padding:22px}.audioBox{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+#playBtn{background:#2563eb;color:#fff;border:0;border-radius:8px;padding:11px 20px;font-weight:700;cursor:pointer}
+#playBtn:disabled{opacity:.55;cursor:not-allowed}.status{font-size:14px;color:#cbd5e1}
+.card{background:#fff;border:1px solid #dbe1e8;border-radius:12px;padding:20px;margin:16px 0;box-shadow:0 2px 8px #00000008}
+textarea,input[type=text]{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:7px;font:inherit;margin-top:8px}
+.option{display:block;padding:10px;margin:8px 0;border:1px solid #dbe1e8;border-radius:8px;cursor:pointer}
+.option:hover{background:#f8fafc}.submitArea{text-align:center;padding:28px 0 45px}
+#submitBtn{background:#16a34a;color:white;border:0;border-radius:10px;padding:14px 35px;font-size:17px;font-weight:800;cursor:pointer}
+.result{display:none;background:#fff;border:2px solid #22c55e;border-radius:12px;padding:25px;margin:20px 0;text-align:center}
+.score{font-size:36px;font-weight:800;color:#166534}.wrong{color:#b91c1c;font-weight:700}.hidden{display:none}
+.note{font-size:13px;color:#64748b}.locked{pointer-events:none;opacity:.82}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap" style="padding:0">
+    <h1 style="margin:0 0 10px;font-size:22px">🎧 IELTS Listening Test</h1>
+    <div class="audioBox">
+      <button id="playBtn">▶ Play Audio</button>
+      <span id="audioStatus" class="status">Audio has not started.</span>
+      <audio id="audio"></audio>
+      <label style="background:#fff1;border:1px solid #ffffff33;padding:7px 10px;border-radius:7px;font-size:13px;cursor:pointer">
+        Choose audio file
+        <input id="audioFile" type="file" accept="audio/*" style="display:none">
+      </label>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="card">
+    <h2 id="testTitle">IELTS Listening Practice Test 001</h2>
+    <p id="instructions">Press Play Audio when you are ready. The audio will continue until it finishes or you submit your answers.</p>
+    <p class="note">Once playback starts, the player controls are intentionally unavailable. The test page cannot provide a completely tamper-proof guarantee against browser/system-level controls, but the page itself does not offer pause, seek, or stop controls.</p>
+  </div>
+
+  <form id="testForm"></form>
+
+  <div class="submitArea" id="submitArea">
+    <button id="submitBtn" type="button">Submit Test</button>
+    <p class="note">Submitting stops the audio and automatically marks your answers.</p>
+  </div>
+
+  <div id="result" class="result">
+    <h2>Test Result</h2>
+    <div id="score" class="score"></div>
+    <p id="wrongCount" class="wrong"></p>
+    <p id="detail"></p>
+  </div>
+</main>
+
+<script>
+const test = {
+ title:"IELTS Listening Practice Test 001",
+ instructions:"Listen carefully and answer all 10 questions. Complete each answer before pressing Submit.",
+ data:[
+ {type:"sentence_completion",q:"The community library will open at ______ on Saturday morning.",a:"9:30",e:"The library opens half an hour earlier on Saturday."},
+ {type:"sentence_completion",q:"Visitors must bring their ______ if they want to borrow books.",a:"library card",e:"A library card is required for borrowing."},
+ {type:"note_completion",q:"Community Library Information\\nMembership fee: £______ per year\\nOpening hours on weekdays: ______ to 6:00 p.m.\\nChildren's reading session: Every ______ afternoon",a:"12;9:00 a.m.;Thursday",e:"The three answers are 12, 9:00 a.m., and Thursday."},
+ {type:"multiple_choice",q:"Why has the library introduced a new computer room?",o:["A. To provide computer lessons for children","B. To give members access to the internet","C. To allow staff to work more efficiently","D. To replace the old reading room"],a:"B. To give members access to the internet",e:"The new room provides members with internet access."},
+ {type:"multiple_choice",q:"What should visitors do if they want to reserve a study desk?",o:["A. Call the library","B. Speak to the librarian","C. Use the online booking system","D. Send an email one day in advance"],a:"C. Use the online booking system",e:"Reservations are made through the online booking system."},
+ {type:"true_false_not_given",q:"The library is located next to the town hall.",o:["TRUE","FALSE","NOT GIVEN"],a:"FALSE",e:"It is opposite the town hall, not next to it."},
+ {type:"true_false_not_given",q:"Library members can use the computers free of charge.",o:["TRUE","FALSE","NOT GIVEN"],a:"TRUE",e:"Computer use is free for members."},
+ {type:"true_false_not_given",q:"The library has more than twenty computers available for public use.",o:["TRUE","FALSE","NOT GIVEN"],a:"NOT GIVEN",e:"The number of computers is not stated."},
+ {type:"note_completion",q:"Study Room Rules\\nMaximum booking time: ______ hours\\nFood is not allowed, but ______ may be taken into the room.\\nUsers must leave the room ______ minutes before closing time.",a:"2;drinks;15",e:"The answers are 2, drinks, and 15."},
+ {type:"multiple_choice",q:"What does the speaker recommend to people who have never used the library before?",o:["A. Attend the Thursday reading session","B. Register online before visiting","C. Ask a librarian for a short tour","D. Download the library's mobile application"],a:"C. Ask a librarian for a short tour",e:"First-time visitors are advised to ask for a short tour."}
+ ]};
+
+const form=document.getElementById("testForm"), audio=document.getElementById("audio");
+let submitted=false, started=false, objectURL=null;
+
+document.getElementById("testTitle").textContent=test.title;
+document.getElementById("instructions").textContent=test.instructions;
+
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function blanks(q,index){
+ const n=(q.match(/______/g)||[]).length;
+ let out=esc(q).replace(/______/g,()=>`<input type="text" data-q="${index}" class="blank" placeholder="Answer">`);
+ return out.replace(/\n/g,"<br>");
+}
+test.data.forEach((x,i)=>{
+ const card=document.createElement("section");card.className="card";
+ let content=`<h3>Question ${i+1}</h3><p>${x.type.includes("completion")?blanks(x.q,i):esc(x.q)}</p>`;
+ if(x.o) content+=x.o.map(o=>`<label class="option"><input type="radio" name="q${i}" value="${esc(o)}"> ${esc(o)}</label>`).join("");
+ card.innerHTML=content;form.appendChild(card);
+});
+
+document.getElementById("audioFile").addEventListener("change",e=>{
+ const file=e.target.files[0]; if(!file)return;
+ if(objectURL)URL.revokeObjectURL(objectURL);
+ objectURL=URL.createObjectURL(file);audio.src=objectURL;
+ document.getElementById("audioStatus").textContent="Audio ready: "+file.name;
+ document.getElementById("playBtn").disabled=false;
+});
+document.getElementById("playBtn").addEventListener("click",async()=>{
+ if(!audio.src){alert("Please choose an audio file first.");return}
+ try{
+   await audio.play(); started=true;
+   document.getElementById("playBtn").disabled=true;
+   document.getElementById("audioStatus").textContent="🔊 Audio is playing. Continue answering the test.";
+ }catch(e){alert("The audio could not start. Please try again.");}
+});
+audio.addEventListener("ended",()=>{if(!submitted)document.getElementById("audioStatus").textContent="Audio has finished. You may review your answers and submit."});
+audio.addEventListener("pause",()=>{if(started&&!submitted&&!audio.ended){setTimeout(()=>{if(!submitted&&!audio.ended)audio.play().catch(()=>{})},0)}});
+
+function norm(s){return String(s||"").trim().toLowerCase().replace(/\s+/g," ")}
+function studentAnswer(i,x){
+ if(x.type.includes("completion")){
+   return [...document.querySelectorAll(`input.blank[data-q="${i}"]`)].map(el=>el.value.trim()).join(";");
+ }
+ const el=document.querySelector(`input[name="q${i}"]:checked`);return el?el.value:"";
+}
+document.getElementById("submitBtn").addEventListener("click",()=>{
+ if(submitted)return;
+ submitted=true;
+ if(!audio.paused){audio.pause();audio.currentTime=0}
+ document.getElementById("audioStatus").textContent="Audio stopped. Test submitted.";
+ document.getElementById("playBtn").disabled=true;
+ let correct=0, wrong=[];
+ test.data.forEach((x,i)=>{
+   const ans=studentAnswer(i,x);
+   if(norm(ans)===norm(x.a))correct++; else wrong.push({n:i+1,your:ans||"No answer",answer:x.a,explanation:x.e});
+ });
+ document.querySelectorAll("input").forEach(el=>el.disabled=true);
+ document.getElementById("submitBtn").disabled=true;
+ const result=document.getElementById("result");result.style.display="block";
+ document.getElementById("score").textContent=`${correct} / ${test.data.length} Correct`;
+ document.getElementById("wrongCount").textContent=`Wrong or unanswered: ${wrong.length}`;
+ document.getElementById("detail").innerHTML=wrong.length
+ ? "<h3>Review</h3>"+wrong.map(w=>`<div style="text-align:left;border-top:1px solid #e5e7eb;padding:10px 0"><strong>Question ${w.n}</strong><br>Your answer: ${esc(w.your)}<br>Correct answer: <strong>${esc(w.answer)}</strong><br><span class="note">${esc(w.explanation)}</span></div>`).join("")
+ : "Excellent — every answer is correct!";
+ result.scrollIntoView({behavior:"smooth",block:"start"});
+});
+</script>
+</body>
+</html>
